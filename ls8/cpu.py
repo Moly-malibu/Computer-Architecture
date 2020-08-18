@@ -88,7 +88,7 @@ class CPU:
     self.FL_less    = 0b00000100
     self.FL_grater = 0b00000010
     self.FL_equal   = 0b00000001
-
+#Split
     def get_split(self):   
         return self.record.decode_bytes(7)
     def set_split(self, value):
