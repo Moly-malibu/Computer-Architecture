@@ -10,12 +10,12 @@ class Memory():
         self.clear()
     def clear(self):
         self.primary_memory = [0] * self.size
-    def decode_bytes(self, conduct):                      #Read Bytes
-        if conduct < 0 or conduct > self.size -1:
+    def decode_bytes(self, address):                      #Read Bytes
+        if address < 0 or address > self.size -1:
             raise ReferenceError('memory performance')
         return self.primary_memory[conduct]
-    def compose_bytes(self, conduct, data):                #write bytes
-        if conduct < 0 or conduct > self.size -1:
+    def compose_bytes(self, address, data):                #write bytes
+        if address < 0 or address > self.size -1:
             raise ReferenceError('Memory Performing')
         try:
             rational_number = int(data)
@@ -23,7 +23,7 @@ class Memory():
                 raise TypeError('Overflow')
             if rational_number < 0:
                 raise TypeError('Underflow')
-            self.primary_memory[conduct] =  rational_number
+            self.primary_memory[address] =  rational_number
         except  TypeError:
             raise TypeError('8-bit number')
 
@@ -107,12 +107,12 @@ class CPU:
                     data = int(line[0], 2)
                 except  ValueError:
                     continue
-                self.ram_write(conduct, data)
-                conduct += 1
+                self.ram_write(address, data)
+                address += 1
     def ram_read(self, conduct):
-        return self.ram.decode_byte(conduct)
-    def ram_write(self, conduct, value):
-        self.ram.compose_bytes(conduct, value)
+        return self.ram.decode_byte(address)
+    def ram_write(self, address, value):
+        self.ram.compose_bytes(address, value)
     def trace(self):
         '''
         Handy function to print out the CPU state. you might want to call this
@@ -155,7 +155,7 @@ class CPU:
                 try:
                     self.execution_table[self.IR]()
                 except KeyError:
-                    print(f'conduct' %(self.IR, self.PC))
+                    print(f'address' %(self.IR, self.PC))
                     self.HLT()
                 if not group_pc:
                     self.pc +=(1 + quantity_ops)
@@ -163,7 +163,7 @@ class CPU:
         try:
             self.execute_table[self.IR](track_a, track_b)
         except KeyError:
-            print(f'Unknows ALU at conduct' % (self.IR, self.PC))
+            print(f'Unknows ALU at address' % (self.IR, self.PC))
             self.HLT()
  
 # `PC`: Program Counter, address of the currently executing instruction
@@ -213,8 +213,8 @@ class CPU:
         self.PC = self.record.read_byte(register_number)
     def Return(self):                                       #RETURN
         self.set_split(self.get_split()+ 1)
-        return_conduct = self.ram_read(self.get_split())
-        self.PC = return_conduct
+        return_address = self.ram_read(self.get_split())
+        self.PC = return_address
 
 #Stored in registers according with the instruction.
 #ADD + ->ADDITION
