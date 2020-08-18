@@ -212,61 +212,80 @@ class CPU:
         self.PC = return_conduct
 
 #Stored in registers according with the instruction.
-
+#ADD + ->ADDITION
     def ADD(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value + track_b_value
         self.record.compuse_bytes(track_a, track_b)
+
+#MUL ->MULTIPLICATION
     def Mul(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
-        result = track_a_value + track_b_value
+        result = track_a_value * track_b_value
         self.record.compuse_bytes(track_a, track_b)
+
+#BITWISE OR
     def CMP(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         if track_a_value == track_b_value:
             self.FL |= self.FL_equal
         else:
-            self.FL &= ~self.FL_equal
+            self.FL &= ~self.FL_equal   #BITWISE, NOT
         if track_a_value < track_b_value:
-            self.FL |= self.FL_less
+            self.FL |= self.FL_less     #BITWISER OR
         else:
             self.FL &= ~self.FL_less
         if track_a_value > track_b_value:
             self.FL |= self.FL_greater
         else:
             self.FL & ~self.FL_greater
+#https://www.tutorialspoint.com/python/bitwise_operators_example.htm
+#AND & -> mask to extract those two bits, then add one to the result
     def And(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value & track_b_value
         self.record.compuse_bytes(track_a, result)
+
+#OR | -> Select let's bitwise-OR the shifted value with the result from the previous step. It copies a bit if it exists in either operand.
     def OR(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value | track_b_value
         self.record.compuse_bytes(track_a, result)
+
+#XOR ^ -> is exclusiveor, its resul is true if only one of its inputs is true. Does a "bitwise exclusive or". Each bit of the output is the same as the corresponding bit in x if that bit in y is 0, and it's the complement of the bit in x if that bit in y is 1.
     def XOR(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value ^ track_b_value
         self.record.compuse_bytes(track_a, result)
+
+#NOT ~ call inverter has a single input and a single output. If that input is 1 (or TRUE), then the output is 0 (FALSE).
     def NOT(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         result = ~track_a_value 
         self.record.compuse_bytes(track_a, result)
+
+#SHL << -> Returns x with the bits shifted to the left by y places (and new bits on the right-hand-side are zeros). This is the same as multiplying x by 2**y.
     def SHL(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value << track_b_value
         self.record.compuse_bytes(track_a, result)
+
+#SHR >>  ->Returns x with the bits shifted to the right by y places. This is the same as //'ing x by 2**y.
     def SHR(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value >> track_b_value
         self.record.compuse_bytes(track_a, result)
+
+#https://docs.python.org/3.4/library/operator.html
+#MOD % modulo
     def MOD(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
