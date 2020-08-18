@@ -88,16 +88,21 @@ class CPU:
     self.FL_less    = 0b00000100
     self.FL_grater = 0b00000010
     self.FL_equal   = 0b00000001
-    def get_split(self):   #
+
+    def get_split(self):   
         return self.record.decode_bytes(7)
     def set_split(self, value):
         self.record.compuse_bytes(7, value)
+#Load Data
     def load(self, ls8_file):
         self.ram.clear()
         address = 0
         with open(ls8_file) as f:
             for line in f:
                 line = line.split('#')
+                data = line[0].strip()
+                if data == ' ':
+                    continue
                 try:
                     data = int(line[0], 2)
                 except  ValueError:
