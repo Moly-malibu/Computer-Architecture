@@ -13,7 +13,7 @@ class Memory():
     def decode_bytes(self, address):                      #Read Bytes
         if address < 0 or address > self.size -1:
             raise ReferenceError('memory performance')
-        return self.primary_memory[conduct]
+        return self.primary_memory[address]
     def compose_bytes(self, address, data):                #write bytes
         if address < 0 or address > self.size -1:
             raise ReferenceError('Memory Performing')
