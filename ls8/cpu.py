@@ -36,7 +36,7 @@ class CPU:
     self.track_history = []
 
 #instructions: to see LS8_CHEATSHEET
-
+#calculator Programming
     HLT  = 0x01
     RET  = 0x11
     PUSH = 0x45
@@ -173,12 +173,23 @@ class CPU:
 # `FL`: Flags, see below"""  
 
 #IMPLEMENTE Stack data is stored in RAM
+#HLT
+#Halt the CPU (and exit the emulator). Machine code 00000001
     def HLT(self):
         self.FL &= ~self.FL_running
+
+#LDI register immediate
+#Set the value of a register to an integer. Machine code 10000010 00000rrr iiiiiiii, 82 0r ii
     def LDI(self):
         register_number = self.ram_read(self.PC + 1)
         register_value = sefl.ram_read(self.PC + 2)
         self.record.compose(register_number, resiter_value)
+
+#PRN
+#PRN register pseudo-instruction
+#Print numeric value stored in the given register.
+#Print to the console the decimal integer value that is stored in the given register.
+#Machine code: 01000111 00000rrr, 47 0r
     def PRN(self):
         register_number = self.ram_read(self.PC + 1)
         register_value = self.record.read_byte(register_number)
@@ -190,36 +201,65 @@ class CPU:
 #storage of register and CPU state while handling and interrupt
 #Allocation of local variable for a subroutine
 
+#Push a value in a register onto the stack, decrement sp, store the value in the regiter into RAM
     def Push(self):                                         #PUSH
         self.set_split(self.get_split()-1)
         register_number = self.ram_read(self.PC + 1)
         data = self.record.decode_bytes(resiter_number)
         self.ram_write(self.get_split(), data)
+
+#POT 
+#Pop a value from the stack into the given register
+#Retrieve the value from RAM at the address stored in SP, and store that value in the register.
+#Increment SP.
     def Pop(self):                                          #POP
         register_number = self.ram_read(self.PC +1)
         data = self.ram_read(self.get_split())
         self.record.compose(resiter_number_3, data)
         sefl.set_split(sefl.get_split()+1)
 
+#JMP register
+#Jump to the address stored in the given register.
+#Set the PC to the address stored in the given register.
+#Machine code: 01010100 00000rrr, 54 0r
     def JMP(self):
         register_number = self.ram_read(self.PC + 1)
         self.PC = self.record.read_byte(register_number)
+
+#JEQ register
+#If equal flag is set (true), jump to the address stored in the given register.
+#Machine code: 01010101 00000rrr, 55 0r
     def JEQ(self):
         if self.FL & self.FL_equal == self.FL_equal:
            self.JMP()
         else:
            self.PC += 2
+
+#JNE register
+#If E flag is clear (false, 0), jump to the address stored in the given register.
+#Machine code: 01010110 00000rrr, 56 0r
     def JNE(self):
         if self.FL & self.FL_equal == 0:
            self.JMP()
         else:
            self.PC += 2
+
+#CALL register
+#Calls a subroutine (function) at the address stored in the register.
+#The address of the instruction directly after CALL is pushed onto the stack. This allows us to return to where we left off when the subroutine finishes executing.
+#The PC is set to the address stored in the given register. We jump to that location in RAM and execute the first instruction in the subroutine. The PC can move forward or backwards from its current location.
+#Machine code: 01010000 00000rrr, 50 0r
     def Call(self):                                         #CALL
         self.ram_write(self.get_split(), self.PC + 2)
         self.set_split(self.get_split()-1)
         register_number = self.ram_read(self.PC + 1)
         self.PC = self.record.read_byte(register_number)
-    def Return(self):                                       #RETURN
+
+#RET
+#Return from subroutine.
+#Pop the value from the top of the stack and store it in the PC.
+#Machine Code: 00010001, 11
+    def RET(self):                                       #RETURN
         self.set_split(self.get_split()+ 1)
         return_address = self.ram_read(self.get_split())
         self.PC = return_address
