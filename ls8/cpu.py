@@ -172,7 +172,7 @@ class CPU:
 # `MDR`: Memory Data Register, holds the value to write or the value just read
 # `FL`: Flags, see below"""  
 
-#Implement
+#IMPLEMENTE Stack data is stored in RAM
     def HLT(self):
         self.FL &= ~self.FL_running
     def LDI(self):
@@ -183,6 +183,13 @@ class CPU:
         register_number = self.ram_read(self.PC + 1)
         register_value = self.record.read_byte(register_number)
         print(register_value)
+
+#Push and Pop
+#Functionaly that temporary storage of variable
+#Return address from a suroutine
+#storage of register and CPU state while handling and interrupt
+#Allocation of local variable for a subroutine
+
     def Push(self):                                         #PUSH
         self.set_split(self.get_split()-1)
         register_number = self.ram_read(self.PC + 1)
@@ -193,6 +200,7 @@ class CPU:
         data = self.ram_read(self.get_split())
         self.record.compose(resiter_number_3, data)
         sefl.set_split(sefl.get_split()+1)
+
     def JMP(self):
         register_number = self.ram_read(self.PC + 1)
         self.PC = self.record.read_byte(register_number)
@@ -255,34 +263,45 @@ class CPU:
         result = track_a_value & track_b_value
         self.record.compuse_bytes(track_a, result)
 
-#OR | -> Select let's bitwise-OR the shifted value with the result from the previous step. It copies a bit if it exists in either operand.
+#OR | 
+#-> Select let's bitwise-OR the shifted value with the result from the previous step. 
+# It copies a bit if it exists in either operand.
     def OR(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value | track_b_value
         self.record.compuse_bytes(track_a, result)
 
-#XOR ^ -> is exclusiveor, its resul is true if only one of its inputs is true. Does a "bitwise exclusive or". Each bit of the output is the same as the corresponding bit in x if that bit in y is 0, and it's the complement of the bit in x if that bit in y is 1.
+#XOR ^ 
+# -> is exclusiveor, its resul is true if only one of its inputs is true. 
+# Does a "bitwise exclusive or". Each bit of the output is the same as the corresponding bit in x if that bit in y is 0,
+# and it's the complement of the bit in x if that bit in y is 1.
     def XOR(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value ^ track_b_value
         self.record.compuse_bytes(track_a, result)
 
-#NOT ~ call inverter has a single input and a single output. If that input is 1 (or TRUE), then the output is 0 (FALSE).
+#NOT ~ 
+# call inverter has a single input and a single output. 
+# If that input is 1 (or TRUE), then the output is 0 (FALSE).
     def NOT(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         result = ~track_a_value 
         self.record.compuse_bytes(track_a, result)
 
-#SHL << -> Returns x with the bits shifted to the left by y places (and new bits on the right-hand-side are zeros). This is the same as multiplying x by 2**y.
+#SHL << 
+# -> Returns x with the bits shifted to the left by y places 
+# (and new bits on the right-hand-side are zeros). This is the same as multiplying x by 2**y.
     def SHL(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
         result = track_a_value << track_b_value
         self.record.compuse_bytes(track_a, result)
 
-#SHR >>  ->Returns x with the bits shifted to the right by y places. This is the same as //'ing x by 2**y.
+#SHR >>  
+# ->Returns x with the bits shifted to the right by y places. 
+# This is the same as //'ing x by 2**y.
     def SHR(self, track_a, track_b):
         track_a_value = self.record.read_byte(track_a)
         track_b_value = self.record.read_byte(track_b)
