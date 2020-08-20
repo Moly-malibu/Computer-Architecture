@@ -92,12 +92,12 @@ class CPU:
     def set_split(self, value):
         self.record.compuse_bytes(7, value)
 #Load Data
-    def load(self, ls8_file):
+    def load(self, file_ls8):
         self.ram.clear()
         address = 0
-        with open(ls8_file) as f:
+        with open(file_ls8) as f:
             for line in f:
-                line = line.split('#')
+                line = line.split('#')[0]
                 data = line[0].strip()
                 if data == ' ':
                     continue
@@ -203,7 +203,12 @@ class CPU:
             elif op == "XOR":
                 self.record[track_a] ^= self.record[track_b]    
             else:
-                raise Exception("Unsupported ALU operation")    
+                raise Exception("Unsupported ALU operation")
+            try:
+                self.execution_table[self.IR](track_a, track_b)
+            except KeyError:
+                print(f'f"Unknown ALU instruction 0x%02X at address 0x%02X' % (self.IR, self.PC))
+                self.HLT()
 #IMPLEMENTE Stack data is stored in RAM
 #Halt the CPU (and exit the emulator). 
     def HLT(self):
