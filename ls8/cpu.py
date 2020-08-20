@@ -157,11 +157,50 @@ class CPU:
                 if not group_pc:
                     self.pc +=(1 + quantity_ops)
     def alu(self, op, track_a, track_b):
-        try:
-            self.execute_table[self.IR](track_a, track_b)
-        except KeyError:
-            print(f'Unknows ALU at address' % (self.IR, self.PC))
-            self.HLT()
+            """ALU operations."""
+            if op == "ADD":
+                self.record[track_a] += self.record[track_b]
+            elif op == "SUB": 
+                self.record[track_a] -= self.record[track_b]
+            elif op == "MUL":
+                self.record[track_a] *= self.record[track_b]
+            elif op == "AND":
+                self.record[track_a] &= self.record[track_b]
+            elif op == "CMP":
+                if self.record[track_a] == self.record[track_b]:
+                    self.fl = 0b00000001
+                elif self.record[track_a] > self.record[track_b]:
+                    self.fl = 0b00000010
+                else:
+                    self.fl = 0b00000100
+            elif op == "DEC":
+                self.record[track_a] -= 1
+            elif op == "DIV":
+                if self.record[track_b] == 0:
+                    print("Error: Cannot divide by zero!")
+                    self.halt = True
+                else:
+                    self.record[track_a] /= self.record[track_b]
+            elif op == "INC":
+                self.record[track_a] += 1
+            elif op == "MOD":
+                if self.record[track_b] == 0:
+                    print("Error: Cannot divide by zero!")
+                    self.halt = True
+                else:
+                    self.record[track_a] %= self.record[track_b]
+            elif op == "NOT":
+                self.record[track_a] = ~self.record[track_a] 
+            elif op == "OR":
+                self.record[track_a] |= self.record[track_b]
+            elif op == "SHL":
+                self.record[track_a] <<= self.record[track_b]
+            elif op == "SHR":
+                self.record[track_a] >>= self.record[track_b]
+            elif op == "XOR":
+                self.record[track_a] ^= self.record[track_b]    
+            else:
+                raise Exception("Unsupported ALU operation")    
 #IMPLEMENTE Stack data is stored in RAM
 #Halt the CPU (and exit the emulator). 
     def HLT(self):
