@@ -80,7 +80,8 @@ class CPU:
     self.record.write_byte(7, 0xF4) 
     self.PC = 0             #SPECIFIC REGISTERS
     self.IR = 0 
-    self.FL = 0x00          #FLAG
+#FLAG
+    self.FL = 0x00           
     self.FL_running = 0b10000000
     self.FL_less    = 0b00000100
     self.FL_grater = 0b00000010
@@ -156,6 +157,8 @@ class CPU:
                     self.HLT()
                 if not group_pc:
                     self.pc +=(1 + quantity_ops)
+                    self.interrupt = True    #INTERRUPT
+#ALU
     def alu(self, op, track_a, track_b):
             """ALU operations."""
             if op == "ADD":
@@ -227,16 +230,19 @@ class CPU:
         data = self.ram_read(self.get_split())
         self.record.compose(resiter_number_3, data)
         sefl.set_split(sefl.get_split()+1)
-#Jump to the address stored in the given register.
+#JPM
+# Jump to the address stored in the given register.
     def JMP(self):
         register_number = self.ram_read(self.PC + 1)
         self.PC = self.record.read_byte(register_number)
+#JEQ 
 #JEQ register, If equal flag is set (true), jump to the address stored in the given register.
     def JEQ(self):
         if self.FL & self.FL_equal == self.FL_equal:
            self.JMP()
         else:
            self.PC += 2
+#JNE 
 #JNE register, If E flag is clear (false, 0), jump to the address stored in the given register.
     def JNE(self):
         if self.FL & self.FL_equal == 0:
