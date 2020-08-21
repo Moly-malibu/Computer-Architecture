@@ -26,7 +26,7 @@ class Memory():
       self.primary_memory[address] = true_byte
     except TypeError:
       raise TypeError("8-bit number")
-#Virtual CPU
+#Limits of memory and virtual CPU
 class CPU:
   def __init__(self):
     self.max_memory = 256
@@ -53,6 +53,7 @@ class CPU:
     SHL  = 0xAC
     SHR  = 0xAD
     MOD  = 0xA4
+#Alu table
     self.execute_table = {
       HLT:  self.HLT,
       PRN:  self.PRN,
@@ -79,18 +80,18 @@ class CPU:
     self.record.compose_byte(7, 0xF4) 
     self.PC = 0                        #Specific Registers
     self.IR = 0  
-# flags 
+# flags register
     self.FL = 0x00
     self.FL_running = 0b10000000
     self.FL_less    = 0b00000100
     self.FL_greater = 0b00000010
     self.FL_equal   = 0b00000001
-
   def get_split(self):
     return self.record.decode_byte(7)
   def group_split(self, value):
     self.record.compose_byte(7, value)
   def load(self, program):
+    """Load a program into memory"""
     self.ram.clear()
     address = 0
     with open(program) as f:
@@ -116,7 +117,7 @@ class CPU:
       print(" R%X" % i, end='')
     print(" | FL", end='')
     print()
-    trace_info = f"%02X | %02X %02X %02X |" % (
+    track_info = f"%02X | %02X %02X %02X |" % (
       self.PC,
       #self.fl,
       #self.ie,
@@ -149,18 +150,19 @@ class CPU:
         try:
           self.execute_table[self.IR]()  
         except KeyError:
-          print(f"out instruction 0x%02X at address 0x%02X" % (self.IR, self.PC))
+          print(f"Out instruction 0x%02X at address 0x%02X" % (self.IR, self.PC))
           self.HLT()
       if not group_pc:
         self.PC += (1 + number_ops)
-  def alu(self, op, track_a, track_b):   #ALU
+  def alu(self, op, track_a, track_b):   #ALU operations
         try:
           self.execute_table[self.IR](track_a, track_b) # execute
         except KeyError:
-          print(f"out ALU instruction 0x%02X at address 0x02X" % (self.IR, self.PC))
+          print(f"Out ALU instruction 0x%02X at address 0x02X" % (self.IR, self.PC))
           self.HLT()
+
 #IMPLEMENTE Stack data is stored in RAM
-#Halt the CPU (and exit the emulator). sp
+#Halt the CPU (and exit the emulator). Set halt value to true.
   def HLT(self):
     self.FL &= ~self.FL_running
 #LDI register immediate, Set the value of a register to an integer. 
@@ -168,18 +170,18 @@ class CPU:
     register_number = self.ram_decode(self.PC + 1)
     register_value = self.ram_decode(self.PC + 2)
     self.record.compose_byte(register_number, register_value)
-#PRN register pseudo-instruction
+#PRN register pseudo-instruction. print numeric value stored at register address.
   def PRN(self):
     register_number = self.ram_decode(self.PC + 1)
     register_value = self.record.decode_byte(register_number)
     print(register_value)
-#Push a value in a register onto the stack, decrement sp
+#Push a value in a register onto to the computer stack, decrement sp
   def PUSH(self):
     self.group_split(self.get_split() - 1)
     register_number = self.ram_decode(self.PC + 1)
     data = self.record.decode_byte(register_number)
     self.ram_compose(self.get_split(), data)
-#Pop a value from the stack into the given register
+#Pop a value at current stack pointer off the stack and stores it at the given register.
   def POP(self):
     register_number = self.ram_decode(self.PC + 1)
     data = self.ram_decode(self.get_split())
@@ -204,20 +206,19 @@ class CPU:
       self.PC += 2
 #CALL registe
   def CALL(self):
-    # The address of the ***instruction*** _directly after_ `CALL` is pushed onto the stack.
+    #Call a subroutine(function stored at the addres in the register)
     self.ram_compose(self.get_split(), self.PC + 2)
     self.group_split(self.get_split() - 1)
-    # The PC is set to the address stored in the given register.
     register_number = self.ram_decode(self.PC + 1)
     self.PC = self.record.decode_byte(register_number)
 #Return from subroutine. Pop the value from the top of the stack and store it in the PC.
   def RET(self):
-    # Pop the value from the top of the stack and store it in the `PC`.
     self.group_split(self.get_split() + 1)
     return_adress = self.ram_decode(self.get_split())
     self.PC = return_adress
-#Stored in registers according with the instruction.
-#ADD + ->ADDITIONs
+
+#Stored registers 
+#ADD + ->ADDITIONs loads register with the value at the memory address stored in register.
   def ADD(self, track_a, track_b):
     track_a_value = self.record.decode_byte(track_a)
     track_b_value = self.record.decode_byte(track_b)
