@@ -9,7 +9,7 @@ class Memory():
     self.size = size
     self.clear()
   def clear(self):
-        self.primary_memory = [0] * self.size
+        self.primary_memory = [0] * self.size #R0-R7
   def decode_byte(self, address):               #read the bytes  
     if address < 0 or address > self.size - 1:
       raise ReferenceError("Memory Performance")
@@ -33,18 +33,18 @@ class CPU:
     self.ram = Memory(self.max_memory)
     self.track_history = []
 #Table instructions
-    HLT  = 0x01
+    HLT  = 0x01 #Halt the CPU and exit the emulator.
     RET  = 0x11
-    PUSH = 0x45
-    POP  = 0x46
-    PRN  = 0x47
+    PUSH = 0x45 #push in stack
+    POP  = 0x46 #pop from stack
+    PRN  = 0x47 #Print is a pseudo instructor print numeric value stored in a register
     CALL = 0x50
     JMP  = 0x54
     JEQ  = 0x55
     JNE  = 0x56
-    LDI  = 0x82
-    ADD  = 0xA0
-    MUL  = 0xA2
+    LDI  = 0x82 #load, store a value in register
+    ADD  = 0xA0 #addition
+    MUL  = 0xA2 #multiply
     CMP  = 0xA7
     AND  = 0xA8
     OR   = 0xAA
@@ -55,7 +55,7 @@ class CPU:
     MOD  = 0xA4
 #Alu table
     self.brach_table = {
-      HLT:  self.HLT,
+      HLT:  self.HLT, #refer to it by name instead of by numeric value.
       PRN:  self.PRN,
       LDI:  self.LDI,
       PUSH: self.PUSH,
@@ -103,9 +103,9 @@ class CPU:
           continue
         self.ram_write(address, data)
         address += 1
-  def ram_read(self, address):
+  def ram_read(self, address):  #ram read accept the address to read and return the value stored there
     return self.ram.decode_byte(address)
-  def ram_write(self, address, value):
+  def ram_write(self, address, value): #ram write accept a value to write, and the address to write it to.
     self.ram.compose_byte(address, value)
   def trace(self):
     '''
