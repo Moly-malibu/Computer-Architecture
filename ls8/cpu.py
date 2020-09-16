@@ -2,6 +2,18 @@
 
 import sys
 
+#Instructions
+LDI = 0b10000010 
+PRN = 0b01000111    # Print
+HLT = 0b00000001    # Halt
+MUL = 0b10100010    # Multiply
+ADD = 0b10100000    # Addition
+PUSH = 0b01000101   # Push in stack
+POP = 0b01000110    # Pop from stack
+CALL = 0b01010000
+RET = 0b00010001
+
+
 class CPU:
     """Main CPU class."""
     def __init__(self):
@@ -10,6 +22,7 @@ class CPU:
         self.ram = [0] * 256  #initialize memory
         self.pc = 0 #Program counter, executing instruction.
         self.ir = 0
+        self.running = True
 
     def load(self):
         """Load a program into memory."""
@@ -50,41 +63,36 @@ class CPU:
             self.ram[address] = instruction
             address += 1
             
-        #Instructions
-        LDI = 0b10000010 
-        PRN = 0b01000111    # Print
-        HLT = 0b00000001    # Halt
-        MUL = 0b10100010    # Multiply
-        ADD = 0b10100000    # Addition
-        PUSH = 0b01000101   # Push in stack
-        POP = 0b01000110    # Pop from stack
-        CALL = 0b01010000
-        RET = 0b00010001
-
-    def ram_read(self, loc):
+    def ram_read(self, address):
         """Read a location in memory."""
-        return self.ram[loc]
+        return self.ram[address]
 
-    def ram_write(self, loc, value):
+    def ram_write(self, address, value):
         """Write a value to a location in memory."""
-        self.ram[loc] = value
+        self.ram[address] = value
         return None
-
+    def hlt(self):
+        self.running = False
+        self.pc+=1
+    def ldi(self, reg_num, value):
+        self.reg[reg_num] = value
+        self.pc+=3
+    def prn(self, reg_num):
+        print(self.reg[reg_num])
+        self.pc+=2
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
-
     def trace(self):
         """
         Handy function to print out the CPU state. You might want to call this
         from run() if you need help debugging.
         """
-
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
             #self.fl,
@@ -96,7 +104,6 @@ class CPU:
 
         for i in range(8):
             print(" %02X" % self.reg[i], end='')
-
         print()
 
     def run(self):
@@ -105,16 +112,40 @@ class CPU:
         running = True
         while self.running:
             self.ir = self.ram[self.pc]
-            if self.ir == 100:
-                reg_loc = self.ram[self.pc + 1]
-                value = self.ram[self.pc + 2]
-                self.registers[reg_loc] = value
-                self.pc += 3
-            elif self.ir == 80:
-                reg_loc = self.ram[self.pc + 1]
-                print(self.registers[reg_loc])
-                self.pc += 2
-            elif self.ir == 1:
-                running = False
-            
-        return Nones
+            reg_a = self.ram[self.pc+1]
+            reg_b = self.ram[self.pc+2]
+            if self.ir == HLT:
+                self.hlt()
+            elif ir == LDI:
+                self.ldi(reg_a, reg_b)
+            elif ir == PRN:
+                self.prn(reg_a)
+            elif ir == MUL:
+                self.alu("MUl", reg_a, reg_b)
+                self.pc+=3
+            elif ir == PUSH:
+                self.reg[7] -= 1
+                value = self.reg[reg_a]
+                stack_pointer = self.reg[7]
+                self.ram[stack_pointer] = value
+                self.pc+=2
+            elif ir == POP:
+                stack_pointer = self.reg[7]
+                value = self.ram[stack_pointer]
+                self.reg[reg_a] = value
+                self.reg[7] +=1
+                self.pc+=2
+            elif ir == CALL:
+                address = self.reg[reg_a]
+                address_return = self.pc+2
+                self.reg[7]
+                self.ram[stack_pointer] = address_return
+                self.pc = address
+            elif ir == RET:
+                stack_pointer = self.reg[7]
+                address_return = self.ram[stack_pointer]
+                self.reg[7] += 1
+                self.pc = address_return
+            else:
+                print(f'Direction number{self.pc} not recognizing')
+                self.pc += 1
