@@ -106,7 +106,7 @@ class CPU:
             print(" %02X" % self.reg[i], end='')
         print()
 
-    def run(self):
+    def run(self):   #Load instructions file
         """Run the CPU."""
         self.load()
         running = True
@@ -124,7 +124,7 @@ class CPU:
                 self.alu("MUl", reg_a, reg_b)
                 self.pc+=3
             elif ir == PUSH:
-                self.reg[7] -= 1
+                self.reg[7] -= 1 #decrement stack pointer
                 value = self.reg[reg_a]
                 stack_pointer = self.reg[7]
                 self.ram[stack_pointer] = value
