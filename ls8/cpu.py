@@ -1,329 +1,179 @@
 """CPU functionality."""
 
 import sys
-from datetime import datetime
+import datetime import datetime
 from msvcrt import kbhit, getch
 
-class Memory():
-  """Main CPU class."""
-  def __init__(self, size):
-    """Construct a New CPU"""
-    self.size = size
-    self.clear()
-  def clear(self):
-        self.primary_memory = [0] * self.size #R0-R7
-  def decode_byte(self, address):               #read the bytes  
-    if address < 0 or address > self.size - 1:
-      raise ReferenceError("Memory Performance")
-    return self.primary_memory[address]
-  def compose_byte(self, address, data):        #write the bytes
-    if address < 0 or address > self.size - 1:
-      raise ReferenceError("Memory Performance")
-    try:
-      true_byte = int(data)
-      if true_byte > 0xFF: 
-        raise TypeError("Overflow")
-      if true_byte < 0:
-        raise TypeError("Underflow")
-      self.primary_memory[address] = true_byte
-    except TypeError:
-      raise TypeError("8-bit number")
+#Instructions
+LDI = 0b10000010 
+PRN = 0b01000111    # Print
+HLT = 0b00000001    # Halt
+MUL = 0b10100010    # Multiply
+ADD = 0b10100000    # Addition
+PUSH = 0b01000101   # Push in stack
+POP = 0b01000110    # Pop from stack
+CALL = 0b01010000
+RET = 0b00010001
 
-#Limits of memory and virtual CPU
+
 class CPU:
-  def __init__(self):
-    self.max_memory = 256
-    self.ram = Memory(self.max_memory)
-    self.track_history = []
+    """Main CPU class."""
+    def __init__(self):
+        """Construct a new CPU."""
+        self.registers = [0] * 8 #ram memory R0-R7
+        self.ram = [0] * 256  #initialize memory
+        self.pc = 0 #Program counter, executing instruction.
+        self.ir = 0
+        self.running = True
+        self.halt = False
+        self.pc_override = False
+        self.interrupt = True
 
-#Table instructions
-    HLT  = 0x01 #Halt the CPU and exit the emulator.
-    RET  = 0x11
-    PUSH = 0x45 #push in stack
-    POP  = 0x46 #pop from stack
-    PRN  = 0x47 #Print is a pseudo instructor print numeric value stored in a register
-    CALL = 0x50
-    JMP  = 0x54
-    JEQ  = 0x55
-    JNE  = 0x56
-    LDI  = 0x82 #load, store a value in register
-    ADD  = 0xA0 #addition
-    MUL  = 0xA2 #multiply
-    CMP  = 0xA7
-    AND  = 0xA8
-    OR   = 0xAA
-    XOR  = 0xAB
-    NOT  = 0x69
-    SHL  = 0xAC
-    SHR  = 0xAD
-    MOD  = 0xA4
-#Alu table
-    self.brach_table = {
-      HLT:  self.HLT, #refer to it by name instead of by numeric value.
-      PRN:  self.PRN,
-      LDI:  self.LDI,
-      PUSH: self.PUSH,
-      POP:  self.POP,
-      MUL:  self.MUL,
-      CMP:  self.CMP,
-      JMP:  self.JMP,
-      JEQ:  self.JEQ,
-      JNE:  self.JNE,
-      AND:  self.AND,
-      OR:   self.OR,
-      XOR:  self.XOR,
-      NOT:  self.NOT,
-      SHL:  self.SHL,
-      SHR:  self.SHR,
-      MOD:  self.MOD,
-      CALL: self.CALL,
-      RET:  self.RET,
-      ADD:  self.ADD
-    }
-    self.record = Memory(8)            #Full Registers
-    self.record.compose_byte(7, 0xF4)  #init 
-    self.PC = 0                        #Specific Registers
-    self.IR = 0  
+        # Initialize alu_table
+        self.alu_table = {}
+        self.alu_table[0b10100010] = "MUL"
+        self.alu_table[0b10100000] = "ADD"
+        self.alu_table[0b10101000] = "AND"
+        self.alu_table[0b10100111] = "CMP"
+        self.alu_table[0b01100110] = "DEC"
+        self.alu_table[0b10100011] = "DIV"
+        self.alu_table[0b01100101] = "INC"
+        self.alu_table[0b10100100] = "MOD"
+        self.alu_table[0b01101001] = "NOT"
+        self.alu_table[0b10101010] = "OR"
+        self.alu_table[0b10101100] = "SHL"
+        self.alu_table[0b10101101] = "SHR"
+        self.alu_table[0b10100001] = "SUB"
+        self.alu_table[0b10101011] = "XOR"
 
-# flags register
-    self.FL = 0x00
-    self.FL_running = 0b10000000
-    self.FL_less    = 0b00000100
-    self.FL_greater = 0b00000010
-    self.FL_equal   = 0b00000001
-  def get_split(self):
-    return self.record.decode_byte(7)
-  def group_split(self, value):
-    self.record.compose_byte(7, value)
-  def load(self, program):
-    """Load a program into memory"""
-    self.ram.clear()
-    address = 0
-    with open(program) as f:
-      for line in f:
-        line = line.split("#")
-        try:
-          data = int(line[0], 2)
-        except ValueError:
-          continue
-        self.ram_write(address, data)
-        address += 1
-  def ram_read(self, address):  #ram read accept the address to read and return the value stored there
-    return self.ram.decode_byte(address)
-  def ram_write(self, address, value): #ram write accept a value to write, and the address to write it to.
-    self.ram.compose_byte(address, value)
-  def trace(self):
-    '''
-    Handy function to print out the CPU state. you might want to call this
-    from fun() if you need help debugging.
-    '''
-    print("PC | IN P1 P2 |", end='')
-    for i in range(8):
-      print(" R%X" % i, end='')
-    print(" | FL", end='')
-    print()
-    track_info = f"%02X | %02X %02X %02X |" % (
-      self.PC,
-      #self.fl,
-      #self.ie,
-      self.ram_read(self.PC),
-      self.ram_read(self.PC + 1),
-      self.ram_read(self.PC + 2))
-    for i in range(8):    #Fallowing the move
-      track_inf += " %02X" % self.record.decode_byte(i)
-    track_inf += " | " + "{0:b}".format(self.FL)
-    self.track_history.append(track_inf)
-    last_track = self.track_history[-5:]
-    for line in last_track:
-      print(line, end='')
-      print()
-    print()
+        # Initialize Interupt Table
+        self.interrupt_table = {}
+        self.interrupt_table[0b00000001] = 0xF8
+        self.interrupt_table[0b00000010] = 0xF9
 
-#CPU ON
-  def run(self):
-    """Run the CPU"""
-    self.FL |= self.FL_running  
-    while self.FL & self.FL_running == self.FL_running: 
-      self.IR = self.ram_read(self.PC) 
-      self.halt = False #
+    def load(self):
+        """Load a program into memory."""
+    program = sys.argv[1]
+    try:
+        address = 0
+        with open(program) as f:
+            for line in f:
+                t = line.split('#')[0]
+                n = t[0].strip()
+                if n == '':
+                    continue
+            try:
+                n = int(n,2)
+                self.ram[address] = n
+            except ValueError:
+                print(f"Invalid Number'{n}'")
+                sys.exit(1)
+            memory[address] = n
+            address += 1
+    except FileNotFoundError:
+        print(f'{sys.argv[0]}:{sys.argv[1]} File not found: {sys.argv[1]}')
+        sys.exit()
 
-# decode or read 
-      number_ops = (self.IR & 0b11000000) >> 6
-      use_alu = (self.IR & 0b00100000) >> 5
-      group_pc = (self.IR & 0b00010000) >> 4
-      add_id = (self.IR & 0b00001111) >> 0
-      if use_alu:
-        self.alu(self.IR, self.ram_read(self.PC + 1), self.ram_read(self.PC + 2))
-      else:
-        try:
-          self.brach_table[self.IR]()  
-        except KeyError:
-          print(f"Out instruction 0x%02X at address 0x%02X" % (self.IR, self.PC))
-          self.HLT()
-      if not group_pc:
-        self.PC += (1 + number_ops)
+        # For now, we've just hardcoded a program:
 
-  def alu(self, op, operation_a, operation_b):   #ALU operations
-        try:
-          self.brach_table[self.IR](operation_a, operation_b) # execute
-        except KeyError:
-          print(f"Out ALU instruction 0x%02X at address 0x02X" % (self.IR, self.PC))
-          self.HLT()
+        program = [
+            # From print8.ls8
+            0b10000010, # LDI R0,8
+            0b00000000,
+            0b00001000,
+            0b01000111, # PRN R0
+            0b00000000,
+            0b00000001, # HLT
+        ]
 
-#IMPLEMENTE Stack data is stored in RAM
-#Halt the CPU exit the emulator. Set halt value to true. HLT is encountered
-  def HLT(self):
-    self.FL &= ~self.FL_running
+        for instruction in program:
+            self.ram[address] = instruction
+            address += 1
+            
+    def ram_read(self, address):
+        """Read a location in memory."""
+        return self.ram[address]
 
-#LDI register immediate, Set the value of a register to an integer. 
-  def LDI(self):
-    register_number = self.ram_read(self.PC + 1)
-    register_value = self.ram_read(self.PC + 2)
-    self.record.compose_byte(register_number, register_value)
+    def ram_write(self, address, value):
+        """Write a value to a location in memory."""
+        self.ram[address] = value
+        return None
+    def hlt(self):
+        self.running = False
+        self.pc+=1
+    def ldi(self, reg_num, value):
+        self.reg[reg_num] = value
+        self.pc+=3
+    def prn(self, reg_num):
+        print(self.reg[reg_num])
+        self.pc+=2
+    def alu(self, op, reg_a, reg_b):
+        """ALU operations."""
+        if op == "ADD":
+            self.reg[reg_a] += self.reg[reg_b]
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+        else:
+            raise Exception("Unsupported ALU operation")
+    def trace(self):
+        """
+        Handy function to print out the CPU state. You might want to call this
+        from run() if you need help debugging.
+        """
+        print(f"TRACE: %02X | %02X %02X %02X |" % (
+            self.pc,
+            #self.fl,
+            #self.ie,
+            self.ram_read(self.pc),
+            self.ram_read(self.pc + 1),
+            self.ram_read(self.pc + 2)
+        ), end='')
 
-#PRN register pseudo-instruction. print numeric value stored at register address.
-  def PRN(self):
-    register_number = self.ram_read(self.PC + 1)
-    register_value = self.record.decode_byte(register_number)
-    print(register_value)
+        for i in range(8):
+            print(" %02X" % self.reg[i], end='')
+        print()
 
-#Push a value in a register onto to the computer stack, decrement sp
-  def PUSH(self):
-    self.group_split(self.get_split() - 1)
-    register_number = self.ram_read(self.PC + 1)
-    data = self.record.decode_byte(register_number)
-    self.ram_write(self.get_split(), data)
+    def run(self):   #Load instructions file
+        """Run the CPU."""
+        self.load()
+        running = True
+        while self.running:
+            self.ir = self.ram[self.pc]
+            reg_a = self.ram[self.pc+1]
+            reg_b = self.ram[self.pc+2]
+            if self.ir == HLT:
+                self.hlt()
+            elif ir == LDI:
+                self.ldi(reg_a, reg_b)
+            elif ir == PRN:
+                self.prn(reg_a)
+            elif ir == MUL:
+                self.alu("MUl", reg_a, reg_b)
+                self.pc+=3
+            elif ir == PUSH:
+                self.reg[7] -= 1 #decrement stack pointer
+                value = self.reg[reg_a]
+                stack_pointer = self.reg[7]
+                self.ram[stack_pointer] = value
+                self.pc+=2
+            elif ir == POP:
+                stack_pointer = self.reg[7]
+                value = self.ram[stack_pointer]
+                self.reg[reg_a] = value
+                self.reg[7] +=1
+                self.pc+=2
+            elif ir == CALL:
+                address = self.reg[reg_a]
+                address_return = self.pc+2
+                self.reg[7]
+                self.ram[stack_pointer] = address_return
+                self.pc = address
+            elif ir == RET:
+                stack_pointer = self.reg[7]
+                address_return = self.ram[stack_pointer]
+                self.reg[7] += 1
+                self.pc = address_return
+            else:
+                print(f'Direction number{self.pc} not recognizing')
+                self.pc += 1
 
-#Pop a value at current stack pointer off the stack and stores it at the given register.
-  def POP(self):
-    register_number = self.ram_read(self.PC + 1)
-    data = self.ram_read(self.get_split())
-    self.record.compose_byte(register_number, data)
-    self.group_split(self.get_split() + 1)
-
-#CALL registe
-  def CALL(self):
-    #Call a subroutine(function stored at the addres in the register)
-    self.ram_write(self.get_split(), self.PC + 2)
-    self.group_split(self.get_split() - 1)
-    register_number = self.ram_read(self.PC + 1)
-    self.PC = self.record.decode_byte(register_number)
-
-#Return from subroutine. Pop the value from the top of the stack and store it in the PC.
-  def RET(self):
-    self.group_split(self.get_split() + 1)
-    return_adress = self.ram_read(self.get_split())
-    self.PC = return_adress
-
-#MINIMUM VIABLE PRODUCT
-#JPM
-# Jump to the address stored in the given register.
-  def JMP(self):
-    register_number = self.ram_read(self.PC + 1)
-    self.PC = self.record.decode_byte(register_number)
-
-#JEQ register, If equal flag is set (true), jump to the address stored in the given register.
-  def JEQ(self):
-    if self.FL & self.FL_equal == self.FL_equal:
-      self.JMP()
-    else:
-      self.PC += 2
-
-#JNE register, If E flag is clear (false, 0), jump to the address stored in the given register.
-  def JNE(self):
-    if self.FL & self.FL_equal == 0:
-      self.JMP()
-    else:
-      self.PC += 2
-
-#Stored registers 
-#ADD + ->ADDITIONs loads register with the value at the memory address stored in register.
-  def ADD(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value + track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#MUL ->MULTIPLICATION
-  def MUL(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value * track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#CMP BITWISE OR
-  def CMP(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    if track_a_value == track_b_value:
-      self.FL |= self.FL_equal   #Bitwiser, not FL = ON
-    else:
-      self.FL &= ~self.FL_equal  #Bitwiser or FL = OFF
-    if track_a_value < track_b_value:
-      self.FL |= self.FL_less
-    else:
-      self.FL &= ~self.FL_less
-    if track_a_value > track_b_value:
-      self.FL |= self.FL_greater
-    else:
-      self.FL &= ~self.FL_greater
-      
-#STRETCH PROBLEMS
-#https://www.tutorialspoint.com/python/bitwise_operators_example.htm
-#AND & -> mask to extract those two bits, then add one to the result
-  def AND(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value & track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#OR | 
-#-> Select let's bitwise-OR the shifted value with the result from the previous step. 
-# It copies a bit if it exists in either operand.
-  def OR(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value | track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#XOR ^ 
-# -> is exclusiveor, its resul is true if only one of its inputs is true. 
-  def XOR(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value ^ track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#NOT ~ 
-# call inverter has a single input and a single output. 
-# If that input is 1 (or TRUE), then the output is 0 (FALSE).
-  def NOT(self, operation_a, _):
-    track_a_value = self.record.decode_byte(operation_a)
-    result = ~track_a_value
-    self.record.compose_byte(operation_a, result)
-
-#SHL << 
-# -> Returns x with the bits shifted to the left by y places 
-# (and new bits on the right-hand-side are zeros). This is the same as multiplying x by 2**y.
-  def SHL(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value << track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#SHR >>  
-# ->Returns x with the bits shifted to the right by y places. 
-# This is the same as //'ing x by 2**y
-  def SHR(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value >> track_b_value
-    self.record.compose_byte(operation_a, result)
-
-#https://docs.python.org/3.4/library/operator.html
-#MOD % modulo
-  def MOD(self, operation_a, operation_b):
-    track_a_value = self.record.decode_byte(operation_a)
-    track_b_value = self.record.decode_byte(operation_b)
-    result = track_a_value % track_b_value
-    self.record.compose_byte(operation_a, result)
